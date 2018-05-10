@@ -18,6 +18,8 @@
 #
 # resolver: ./custom-snapshot.yaml
 # resolver: https://example.com/snapshots/2018-01-01.yaml
+
+# Update .circleci/config.yaml when you update this
 resolver: lts-11.8
 
 # User packages to be built.
@@ -63,3 +65,10 @@ packages:
 #
 # Allow a newer minor version of GHC than the snapshot specifies
 # compiler-check: newer-minor
+
+image:
+  container:
+    base: quay.io/weaveworks/alertdiff-base
+    name: quay.io/weaveworks/alertdiff
+    executables:
+    - alertdiff
