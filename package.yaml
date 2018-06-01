@@ -24,9 +24,21 @@ dependencies:
 
 library:
   source-dirs: src
+  dependencies:
+  - aeson
+  - async
+  - bytestring
+  - containers
+  - http-client
+  - optparse-applicative
+  - split
+  - servant-client
+  - servant-server
+  - stm
+  - transformers
 
 executables:
-  alertdiff-exe:
+  alertdiff:
     main:                Main.hs
     source-dirs:         app
     ghc-options:
@@ -35,6 +47,13 @@ executables:
     - -with-rtsopts=-N
     dependencies:
     - alertdiff
+    - containers
+    - http-client
+    - http-client-tls
+    - optparse-applicative
+    - servant-client
+    - stm
+    - warp
 
 tests:
   alertdiff-test:

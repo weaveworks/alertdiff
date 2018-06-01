@@ -1,0 +1,19 @@
+version: 2
+jobs:
+  build:
+    docker:
+      # Update stack.yaml when you change this.
+      - image: fpco/stack-build:lts-11.8
+    steps:
+      - checkout
+      - setup_remote_docker
+      - run: apt update && apt install -y docker.io
+      - run: make all
+
+      - deploy:
+          name: Maybe push master images
+          command: |
+            if [ -z "${CIRCLE_TAG}" -a "${CIRCLE_BRANCH}" == "master" ]; then
+              docker login -u "$DOCKER_USER" -p "$DOCKER_PASS" quay.io
+              make publish-image
+            fi
