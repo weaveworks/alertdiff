@@ -1,10 +1,10 @@
 name:                alertdiff
 version:             0.1.0.0
-github:              "githubuser/alertdiff"
-license:             BSD3
-author:              "Author name here"
-maintainer:          "example@example.com"
-copyright:           "2018 Author name here"
+github:              "weaveworks/alertdiff"
+license:             ALv2
+author:              "Adam Harrison"
+maintainer:          "awh@weave.works"
+copyright:           "2018 Weaveworks"
 
 extra-source-files:
 - README.md
