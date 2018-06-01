@@ -15,6 +15,7 @@ build:
 	stack build
 
 publish-image:
+	docker tag quay.io/$(DH_ORG)/alertdiff:latest quay.io/$(DH_ORG)/alertdiff:$(VERSION)
 	docker push quay.io/$(DH_ORG)/alertdiff:$(VERSION)
 
 alertdiff-base/.uptodate: alertdiff-base/Dockerfile
