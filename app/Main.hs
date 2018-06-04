@@ -13,7 +13,7 @@ import Servant.Client               (parseBaseUrl)
 import AlertDiff.AlertManager.Model (Alert(..))
 import AlertDiff.Config             (Options(..),optionParser)
 import AlertDiff.Server             (app)
-import AlertDiff                    (State(..),AlertSource(..))
+import AlertDiff                    (State(State),AlertSource(..))
 
 main :: IO ()
 main = do
@@ -23,7 +23,7 @@ main = do
     let manager     = newManager tlsManagerSettings
     let isImportant = mkFilter (ignoreAlerts options)
 
-    run (port options) $ app $ State manager expectedSource actualSource isImportant
+    run (port options) $ app $ State manager expectedSource actualSource isImportant (excludedLabels options)
 
     where
         -- Return a push or pull alert source depending on supplied arguments

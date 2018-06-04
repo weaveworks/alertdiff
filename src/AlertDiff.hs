@@ -4,6 +4,7 @@ module AlertDiff
     ) where
 
 import Control.Concurrent.STM        (TVar)
+import Data.Set                      (Set)
 import Network.HTTP.Client           (Manager)
 import Servant.Client                (BaseUrl)
 
@@ -26,8 +27,9 @@ data AlertSource = PushSource (TVar [Alert]) | PullSource BaseUrl (Maybe AuthTok
 
 -- | Environment for our application
 data State =
-    State { manager        :: IO Manager    -- ^ HTTP connection manager for pulling alerts
-          , expectedSource :: AlertSource   -- ^ Pull or push configuration for expected alerts
-          , actualSource   :: AlertSource   -- ^ Push or push configuration for actual alerts
-          , isImportant    :: Alert -> Bool -- ^ Predicate to filter out alerts from comparison
+    State { manager        :: IO Manager     -- ^ HTTP connection manager for pulling alerts
+          , expectedSource :: AlertSource    -- ^ Pull or push configuration for expected alerts
+          , actualSource   :: AlertSource    -- ^ Push or push configuration for actual alerts
+          , isImportant    :: Alert -> Bool  -- ^ Predicate to filter out alerts from comparison
+          , excludedLabels :: Set String     -- ^ Labels to exlude from comparison
           }

@@ -58,10 +58,18 @@ alertsToMetrics metricName = Set.map alertToMetric
 
 -- Compare expected to actual alerts and return the differences
 -- as metrics on which we can base Prometheus alerts.
-diffAlerts :: [Alert] -> [Alert] -> [Metric]
-diffAlerts expected actual = Set.toList $ Set.union missing spurious
+diffAlerts
+    :: Set String       -- ^ Labels to exclude from comparison
+    -> [Alert]          -- ^ Expected alerts
+    -> [Alert]          -- ^ Actual alerts
+    -> [Metric]         -- ^ Difference expressed as metrics
+diffAlerts excludedLabels expected actual = Set.toList $ Set.union missing spurious
     where
-        es = Set.fromList expected
-        as = Set.fromList actual
+        es = Set.fromList $ excludeLabels <$> expected
+        as = Set.fromList $ excludeLabels <$> actual
         missing = alertsToMetrics "alertdiff_missing_alert" $ Set.difference es as
         spurious = alertsToMetrics "alertdiff_spurious_alert" $ Set.difference as es
+
+        excludeLabels :: Alert -> Alert
+        excludeLabels alert =
+            alert { labels = Map.withoutKeys (labels alert) excludedLabels }
