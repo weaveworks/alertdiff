@@ -6,6 +6,8 @@ module AlertDiff.Config
 import Data.List.Split     (splitOn)
 import Data.Semigroup      ((<>))
 import Options.Applicative (Parser,ReadM,ParserInfo,long,option,value,info,(<**>),fullDesc,strOption,optional,maybeReader,helper,auto,showDefault)
+import Data.Set            (Set)
+import qualified Data.Set  as Set
 
 -- | Runtime configuration
 data Options =
@@ -20,6 +22,10 @@ data Options =
 stringList :: ReadM [String]
 stringList = maybeReader f
     where f s = Just $ splitOn "," s
+
+stringSet :: ReadM (Set String)
+stringSet = maybeReader f
+    where f s = Just $ Set.fromList $ splitOn "," s
 
 argParser :: Parser Options
 argParser = Options
