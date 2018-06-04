@@ -11,18 +11,14 @@ import qualified Data.Set  as Set
 
 -- | Runtime configuration
 data Options =
-    Options { port              :: Int            -- ^ Port on which to serve API
-            , expectedURL       :: Maybe String   -- ^ AlertManager from which to pull expected alerts
-            , actualURL         :: Maybe String   -- ^ AlertManager from which to pull actual alerts
-            , expectedTokenFile :: Maybe String   -- ^ Authentication token for pulling expected alerts
-            , actualTokenFile   :: Maybe String   -- ^ Authentication token for pulling actual alerts
-            , ignoreAlerts      :: [String]       -- ^ Names of alerts which should be excluded from comparison
-            , excludedLabels    :: Set String     -- ^ Names of labels which should be excluded from comparison
+    Options { port              :: Int          -- ^ Port on which to serve API
+            , expectedURL       :: Maybe String -- ^ AlertManager from which to pull expected alerts
+            , actualURL         :: Maybe String -- ^ AlertManager from which to pull actual alerts
+            , expectedTokenFile :: Maybe String -- ^ Authentication token for pulling expected alerts
+            , actualTokenFile   :: Maybe String -- ^ Authentication token for pulling actual alerts
+            , excludedAlarms    :: Set String   -- ^ Names of alerts which should be excluded from comparison
+            , excludedLabels    :: Set String   -- ^ Names of labels which should be excluded from comparison
             }
-
-stringList :: ReadM [String]
-stringList = maybeReader f
-    where f s = Just $ splitOn "," s
 
 stringSet :: ReadM (Set String)
 stringSet = maybeReader f
@@ -35,8 +31,8 @@ argParser = Options
     <*> optional (strOption (long "actual-url"))
     <*> optional (strOption (long "expected-token-file"))
     <*> optional (strOption (long "actual-token-file"))
-    <*> option stringList (long "ignore-alerts" <> value [])
-    <*> option stringSet  (long "excluded-labels" <> value Set.empty)
+    <*> option stringSet (long "excluded-alerts" <> value Set.empty)
+    <*> option stringSet (long "excluded-labels" <> value Set.empty)
 
 -- | Options parser yielding a runtime configuration from command line arguments
 optionParser :: ParserInfo Options

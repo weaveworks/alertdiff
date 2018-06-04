@@ -2,7 +2,6 @@ module Main where
 
 import Control.Concurrent.STM       (newTVar)
 import Control.Monad.STM            (atomically)
-import qualified Data.Map.Strict    as Map
 
 import Network.HTTP.Client          (Manager,newManager)
 import Network.HTTP.Client.TLS      (tlsManagerSettings)
@@ -12,18 +11,19 @@ import Servant.Client               (parseBaseUrl)
 
 import AlertDiff.AlertManager.Model (Alert(..))
 import AlertDiff.Config             (Options(..),optionParser)
+import AlertDiff.Model              (mkAlertDiffer)
 import AlertDiff.Server             (app)
 import AlertDiff                    (State(State),AlertSource(..))
 
 main :: IO ()
 main = do
     options         <- execParser optionParser
+    let manager     = newManager tlsManagerSettings
     expectedSource  <- mkSource (expectedURL options) (expectedTokenFile options)
     actualSource    <- mkSource (actualURL options) (actualTokenFile options)
-    let manager     = newManager tlsManagerSettings
-    let isImportant = mkFilter (ignoreAlerts options)
+    let alertDiffer = mkAlertDiffer (excludedAlarms options) (excludedLabels options)
 
-    run (port options) $ app $ State manager expectedSource actualSource isImportant (excludedLabels options)
+    run (port options) $ app $ State manager expectedSource actualSource alertDiffer
 
     where
         -- Return a push or pull alert source depending on supplied arguments
@@ -34,10 +34,3 @@ main = do
             url'   <- parseBaseUrl url
             token' <- traverse readFile token
             pure $ PullSource url' $ ("Scope-Probe token="++) <$> token'
-
-        -- Return a function that will filter a list of alerts by name
-        mkFilter :: [String] -> Alert -> Bool
-        mkFilter ignored (Alert labels _) =
-            case Map.lookup "alertname" labels of
-                Just name -> name `notElem` ignored
-                Nothing -> True -- Alert has no name label, keep it
