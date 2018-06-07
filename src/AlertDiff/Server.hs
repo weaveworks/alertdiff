@@ -17,6 +17,7 @@ import Control.Monad.IO.Class                  (liftIO)
 import Control.Monad.STM                       (atomically)
 import Control.Monad.Trans.Reader              (ReaderT, ask)
 import Control.Monad.Trans.Reader              (runReaderT)
+import Data.Set                                (Set)
 import Network.HTTP.Client                     (Manager)
 import qualified Data.ByteString.Lazy.Char8 as BS
 import Servant.Client                          (ServantError,runClientM,showBaseUrl,mkClientEnv,parseBaseUrl)
@@ -27,7 +28,7 @@ import Servant                                 (ServantErr,err400,err502,errBody
 import AlertDiff.AlertManager.Client           (AlertResponse(..),getAlertResponse)
 import AlertDiff.AlertManager.Server           (AlertManagerServerAPI)
 import AlertDiff                               (AlertSource(..),State(..))
-import AlertDiff.Model                         (Alert,Metric,diffAlerts,renderMetrics)
+import AlertDiff.Model                         (Alert,AlertDiffer,Metric,renderMetrics)
 
 -- | The Alertdiff server API definition
 type AlertDiffServerAPI = "expected" :> AlertManagerServerAPI
@@ -58,11 +59,9 @@ alertDiffServer = postAlerts expectedSource :<|> postAlerts actualSource :<|> ge
 
     getMetrics :: AppM [Metric]
     getMetrics = do
-        State{manager, expectedSource, actualSource, isImportant} <- ask
+        State{manager, expectedSource, actualSource, alertDiffer} <- ask
         (expected, actual) <- liftIO $ concurrently (getAlerts manager expectedSource) (getAlerts manager actualSource)
-        let expected' = filter isImportant <$> expected
-        let actual' = filter isImportant <$> actual
-        returnDiff expected' actual'
+        returnDiff alertDiffer expected actual
 
     getAlerts :: IO Manager -> AlertSource -> IO (Either ServantErr [Alert])
     getAlerts _ (PushSource t) = Right <$> (atomically $ readTVar t)
@@ -75,11 +74,11 @@ alertDiffServer = postAlerts expectedSource :<|> postAlerts actualSource :<|> ge
     liftError (Right ar) = Left err502 { errBody = BS.pack $ status ar }
     liftError (Left err) = Left err502 { errBody = BS.pack $ show err }
 
-    returnDiff :: Either ServantErr [Alert] -> Either ServantErr [Alert] -> AppM [Metric]
-    returnDiff (Right expected) (Right actual) = pure $ diffAlerts expected actual
-    returnDiff (Left expected) (Left actual) = throwError err502 { errBody = BS.pack $ show expected ++ show actual }
-    returnDiff (Left err) _ = throwError err502 { errBody = BS.pack $ show err }
-    returnDiff _ (Left err) = throwError err502 { errBody = BS.pack $ show err }
+    returnDiff :: AlertDiffer -> Either ServantErr [Alert] -> Either ServantErr [Alert] -> AppM [Metric]
+    returnDiff alertDiffer (Right expected) (Right actual) = pure $ alertDiffer expected actual
+    returnDiff  _ (Left expected) (Left actual) = throwError err502 { errBody = BS.pack $ show expected ++ show actual }
+    returnDiff _ (Left err) _ = throwError err502 { errBody = BS.pack $ show err }
+    returnDiff _ _ (Left err) = throwError err502 { errBody = BS.pack $ show err }
 
 -- | Teach Servant how to convert a list of metrics into Prometheus exposition
 -- format.

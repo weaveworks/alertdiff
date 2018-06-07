@@ -1,8 +1,9 @@
 module AlertDiff.Model
-    ( LabelSet
+    ( AlertDiffer
+    , LabelSet
     , Alert(..)
     , Metric(..)
-    , diffAlerts
+    , mkAlertDiffer
     , renderMetrics
     ) where
 
@@ -56,12 +57,35 @@ alertsToMetrics metricName = Set.map alertToMetric
         alertToMetric :: Alert -> Metric
         alertToMetric alert = Metric metricName (alertToLabelSet alert) 1.0 
 
--- Compare expected to actual alerts and return the differences
--- as metrics on which we can base Prometheus alerts.
-diffAlerts :: [Alert] -> [Alert] -> [Metric]
-diffAlerts expected actual = Set.toList $ Set.union missing spurious
+-- | A function for comparing expected and actual alerts and returning the
+-- differences as metrics on which we can base Prometheus alerts.
+type AlertDiffer
+    =  [Alert]  -- ^ Expected alerts
+    -> [Alert]  -- ^ Actual alerts
+    -> [Metric] -- ^ Differences expressed as metrics
+
+-- | Make an alert differ that can exclude named alarms and labels from
+-- comparison.
+mkAlertDiffer
+    :: Set String -- ^ Alarms to exclude from comparison
+    -> Set String -- ^ Labels to exclude from comparison
+    -> [Alert]    -- ^ Expected alerts
+    -> [Alert]    -- ^ Actual alerts
+    -> [Metric]   -- ^ Difference expressed as metrics
+mkAlertDiffer excludedAlarms excludedLabels expected actual =
+    Set.toList $ Set.union missing spurious
     where
-        es = Set.fromList expected
-        as = Set.fromList actual
+        es = Set.fromList $ excludeLabels <$> filter excludeAlarms expected
+        as = Set.fromList $ excludeLabels <$> filter excludeAlarms actual
         missing = alertsToMetrics "alertdiff_missing_alert" $ Set.difference es as
         spurious = alertsToMetrics "alertdiff_spurious_alert" $ Set.difference as es
+
+        excludeAlarms :: Alert -> Bool
+        excludeAlarms (Alert labels _) =
+            case Map.lookup "alertname" labels of
+                Just name -> name `notElem` excludedAlarms
+                Nothing -> True -- Alert has no name label, keep it
+
+        excludeLabels :: Alert -> Alert
+        excludeLabels alert =
+            alert { labels = Map.withoutKeys (labels alert) excludedLabels }
